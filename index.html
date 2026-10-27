@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Movie Editor</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #10131c;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    .app {
+      max-width: 650px;
+      margin: auto;
+    }
+    h1 { color: #8b9dff; }
+    .panel {
+      background: #1c2231;
+      padding: 18px;
+      border-radius: 14px;
+      margin: 16px 0;
+    }
+    label {
+      display: block;
+      margin: 15px 0 8px;
+    }
+    input, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+    button {
+      border: 0;
+      background: #788aff;
+      color: #10131c;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    video, audio { width: 100%; margin-top: 12px; }
+    .note { color: #c3c9da; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>🎬 AI Movie Editor</h1>
+    <p>Upload your video and voiceover to get started.</p>
+
+    <section class="panel">
+      <label for="videoFile">মুভি ভিডিও নির্বাচন করো</label>
+      <input id="videoFile" type="file" accept="video/*">
+
+      <video id="videoPreview" controls hidden></video>
+
+      <label for="audioFile">ভয়েসওভার নির্বাচন করো</label>
+      <input id="audioFile" type="file" accept="audio/*">
+
+      <audio id="audioPreview" controls hidden></audio>
+
+      <button id="checkButton">ফাইল যাচাই করো</button>
+      <p id="status" class="note">এখনো কোনো ফাইল নির্বাচন করা হয়নি।</p>
+    </section>
+
+    <p class="note">
+      এটি অ্যাপের প্রাথমিক সংস্করণ। AI scene selection,
+      subtitle এবং MP4 export পরের ধাপে যোগ করা হবে।
+    </p>
+  </main>
+
+  <script>
+    const videoInput = document.getElementById('videoFile');
+    const audioInput = document.getElementById('audioFile');
+    const videoPreview = document.getElementById('videoPreview');
+    const audioPreview = document.getElementById('audioPreview');
+    const status = document.getElementById('status');
+
+    videoInput.addEventListener('change', () => {
+      const file = videoInput.files[0];
+      if (!file) return;
+      videoPreview.src = URL.createObjectURL(file);
+      videoPreview.hidden = false;
+    });
+
+    audioInput.addEventListener('change', () => {
+      const file = audioInput.files[0];
+      if (!file) return;
+      audioPreview.src = URL.createObjectURL(file);
+      audioPreview.hidden = false;
+    });
+
+    document.getElementById('checkButton').addEventListener('click', () => {
+      if (!videoInput.files.length || !audioInput.files.length) {
+        status.textContent = 'ভিডিও ও ভয়েসওভার—দুটিই নির্বাচন করো।';
+        return;
+      }
+      status.textContent = 'দুটি ফাইলই নির্বাচন করা হয়েছে! পরের ধাপের জন্য প্রস্তুত।';
+    });
+  </script>
+</body>
+</html>
