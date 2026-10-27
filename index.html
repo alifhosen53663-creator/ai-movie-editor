@@ -2,104 +2,108 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Movie Editor</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      background: #10131c;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
-    .app {
-      max-width: 650px;
-      margin: auto;
-    }
-    h1 { color: #8b9dff; }
-    .panel {
-      background: #1c2231;
-      padding: 18px;
-      border-radius: 14px;
-      margin: 16px 0;
-    }
-    label {
-      display: block;
-      margin: 15px 0 8px;
-    }
-    input, button {
-      box-sizing: border-box;
-      width: 100%;
-      padding: 12px;
-      border-radius: 8px;
-      margin-top: 8px;
-    }
-    button {
-      border: 0;
-      background: #788aff;
-      color: #10131c;
-      font-weight: bold;
-      font-size: 16px;
-    }
-    video, audio { width: 100%; margin-top: 12px; }
-    .note { color: #c3c9da; font-size: 14px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Movie Editor</title>
+<style>
+body{margin:0;background:#10131c;color:#fff;font-family:Arial,sans-serif;padding:20px}
+main{max-width:700px;margin:auto}
+.panel{background:#1c2231;padding:18px;border-radius:14px;margin:16px 0}
+h1{color:#9eacff}
+label{display:block;margin:15px 0 8px}
+input,button{box-sizing:border-box;width:100%;padding:12px;margin:6px 0;border-radius:8px}
+button{background:#8998ff;border:0;font-weight:bold;cursor:pointer}
+video,audio{width:100%;margin-top:12px}
+.note{color:#c4cbe0;font-size:14px}
+</style>
 </head>
 <body>
-  <main class="app">
-    <h1>🎬 AI Movie Editor</h1>
-    <p>Upload your video and voiceover to get started.</p>
+<main>
+<h1>🎬 AI Movie Editor</h1>
+<p>ভিডিও ও ভয়েসওভার আপলোড করে শুরু করো।</p>
 
-    <section class="panel">
-      <label for="videoFile">মুভি ভিডিও নির্বাচন করো</label>
-      <input id="videoFile" type="file" accept="video/*">
+<section class="panel">
+<label for="video">মুভি ভিডিও নির্বাচন করো</label>
+<input id="video" type="file" accept="video/*">
+<video id="preview" controls hidden></video>
 
-      <video id="videoPreview" controls hidden></video>
+<label for="audio">ভয়েসওভার নির্বাচন করো</label>
+<input id="audio" type="file" accept="audio/*">
+<audio id="audioPreview" controls hidden></audio>
 
-      <label for="audioFile">ভয়েসওভার নির্বাচন করো</label>
-      <input id="audioFile" type="file" accept="audio/*">
+<label for="start">ভিডিও কোথা থেকে কাটবে (সেকেন্ড)</label>
+<input id="start" type="number" min="0" value="0">
 
-      <audio id="audioPreview" controls hidden></audio>
+<label for="duration">ক্লিপের দৈর্ঘ্য (সেকেন্ড)</label>
+<input id="duration" type="number" min="1" max="60" value="10">
 
-      <button id="checkButton">ফাইল যাচাই করো</button>
-      <p id="status" class="note">এখনো কোনো ফাইল নির্বাচন করা হয়নি।</p>
-    </section>
+<button id="check">ফাইল যাচাই করো</button>
+<p id="status" class="note">ভিডিও ও ভয়েসওভার নির্বাচন করো।</p>
+</section>
 
-    <p class="note">
-      এটি অ্যাপের প্রাথমিক সংস্করণ। AI scene selection,
-      subtitle এবং MP4 export পরের ধাপে যোগ করা হবে।
-    </p>
-  </main>
+<section class="panel">
+<h3>ভিডিও প্রিভিউ</h3>
+<p class="note">এটি প্রিভিউ ও ফাইল যাচাইয়ের প্রাথমিক সংস্করণ।</p>
+<button id="seek">নির্বাচিত সময় দেখাও</button>
+</section>
+</main>
 
-  <script>
-    const videoInput = document.getElementById('videoFile');
-    const audioInput = document.getElementById('audioFile');
-    const videoPreview = document.getElementById('videoPreview');
-    const audioPreview = document.getElementById('audioPreview');
-    const status = document.getElementById('status');
+<script>
+const video=document.getElementById('video');
+const audio=document.getElementById('audio');
+const preview=document.getElementById('preview');
+const audioPreview=document.getElementById('audioPreview');
+const status=document.getElementById('status');
 
-    videoInput.addEventListener('change', () => {
-      const file = videoInput.files[0];
-      if (!file) return;
-      videoPreview.src = URL.createObjectURL(file);
-      videoPreview.hidden = false;
-    });
+let videoURL='',audioURL='';
 
-    audioInput.addEventListener('change', () => {
-      const file = audioInput.files[0];
-      if (!file) return;
-      audioPreview.src = URL.createObjectURL(file);
-      audioPreview.hidden = false;
-    });
+video.addEventListener('change',()=>{
+  if(videoURL) URL.revokeObjectURL(videoURL);
+  const f=video.files[0];
+  if(!f)return;
+  videoURL=URL.createObjectURL(f);
+  preview.src=videoURL;
+  preview.hidden=false;
+  status.textContent='ভিডিও নির্বাচিত হয়েছে।';
+});
 
-    document.getElementById('checkButton').addEventListener('click', () => {
-      if (!videoInput.files.length || !audioInput.files.length) {
-        status.textContent = 'ভিডিও ও ভয়েসওভার—দুটিই নির্বাচন করো।';
-        return;
-      }
-      status.textContent = 'দুটি ফাইলই নির্বাচন করা হয়েছে! পরের ধাপের জন্য প্রস্তুত।';
-    });
-  </script>
+audio.addEventListener('change',()=>{
+  if(audioURL) URL.revokeObjectURL(audioURL);
+  const f=audio.files[0];
+  if(!f)return;
+  audioURL=URL.createObjectURL(f);
+  audioPreview.src=audioURL;
+  audioPreview.hidden=false;
+  status.textContent='ভয়েসওভার নির্বাচিত হয়েছে।';
+});
+
+document.getElementById('check').onclick=()=>{
+  if(!video.files[0]||!audio.files[0]){
+    status.textContent='ভিডিও ও ভয়েসওভার—দুটিই নির্বাচন করো।';
+    return;
+  }
+  status.textContent='দুটি ফাইল পাওয়া গেছে। এবার ভিডিওর সময় পরীক্ষা করো।';
+};
+
+document.getElementById('seek').onclick=()=>{
+  if(!video.files[0]){
+    status.textContent='আগে একটি ভিডিও নির্বাচন করো।';
+    return;
+  }
+  const start=Number(document.getElementById('start').value);
+  const duration=Number(document.getElementById('duration').value);
+  if(!Number.isFinite(start)||!Number.isFinite(duration)||start<0||duration<1){
+    status.textContent='সময় ও ক্লিপের দৈর্ঘ্য সঠিকভাবে লিখো।';
+    return;
+  }
+  if(!Number.isFinite(preview.duration)||start>=preview.duration){
+    status.textContent='ভিডিওর দৈর্ঘ্যের মধ্যে শুরুর সময় দিতে হবে।';
+    return;
+  }
+  preview.currentTime=start;
+  preview.play();
+  status.textContent='প্রিভিউ শুরু হয়েছে। নির্ধারিত দৈর্ঘ্য: '+duration+' সেকেন্ড।';
+};
+</script>
 </body>
 </html>
