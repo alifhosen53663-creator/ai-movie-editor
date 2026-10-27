@@ -6,11 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Movie Editor</title>
 <style>
-body{margin:0;background:#10131c;color:#fff;font-family:Arial,sans-serif;padding:20px}
+body{margin:0;padding:20px;background:#10131c;color:#fff;font-family:Arial,sans-serif}
 main{max-width:700px;margin:auto}
 .panel{background:#1c2231;padding:18px;border-radius:14px;margin:16px 0}
 h1{color:#9eacff}
-label{display:block;margin:15px 0 8px}
+label{display:block;margin:14px 0 7px}
 input,button{box-sizing:border-box;width:100%;padding:12px;margin:6px 0;border-radius:8px}
 button{background:#8998ff;border:0;font-weight:bold;cursor:pointer}
 video,audio{width:100%;margin-top:12px}
@@ -20,89 +20,119 @@ video,audio{width:100%;margin-top:12px}
 <body>
 <main>
 <h1>🎬 AI Movie Editor</h1>
-<p>ভিডিও ও ভয়েসওভার আপলোড করে শুরু করো।</p>
+<p>ভিডিও কাটো, ভয়েসওভার যোগ করো এবং নতুন ভিডিও তৈরি করো।</p>
 
 <section class="panel">
-<label for="video">মুভি ভিডিও নির্বাচন করো</label>
-<input id="video" type="file" accept="video/*">
-<video id="preview" controls hidden></video>
+<label>ভিডিও নির্বাচন করো</label>
+<input id="vid" type="file" accept="video/*">
+<video id="vp" controls hidden></video>
 
-<label for="audio">ভয়েসওভার নির্বাচন করো</label>
-<input id="audio" type="file" accept="audio/*">
-<audio id="audioPreview" controls hidden></audio>
+<label>ভয়েসওভার নির্বাচন করো</label>
+<input id="aud" type="file" accept="audio/*">
+<audio id="ap" controls hidden></audio>
 
-<label for="start">ভিডিও কোথা থেকে কাটবে (সেকেন্ড)</label>
+<label>শুরুর সময় (সেকেন্ড)</label>
 <input id="start" type="number" min="0" value="0">
 
-<label for="duration">ক্লিপের দৈর্ঘ্য (সেকেন্ড)</label>
-<input id="duration" type="number" min="1" max="60" value="10">
+<label>ক্লিপের দৈর্ঘ্য (সেকেন্ড)</label>
+<input id="dur" type="number" min="1" value="10">
 
 <button id="check">ফাইল যাচাই করো</button>
-<p id="status" class="note">ভিডিও ও ভয়েসওভার নির্বাচন করো।</p>
+<button id="play">প্রিভিউ চালাও</button>
+<button id="export">ভিডিও Export করো</button>
+<p id="status" class="note">প্রথমে ভিডিও ও ভয়েসওভার নির্বাচন করো।</p>
 </section>
 
 <section class="panel">
-<h3>ভিডিও প্রিভিউ</h3>
-<p class="note">এটি প্রিভিউ ও ফাইল যাচাইয়ের প্রাথমিক সংস্করণ।</p>
-<button id="seek">নির্বাচিত সময় দেখাও</button>
+<h3>প্রিভিউ</h3>
+<video id="out" controls hidden></video>
+<a id="download" hidden download="edited-video.webm">ভিডিও ডাউনলোড করো</a>
+<p class="note">Export ফিচারটি ব্রাউজারের WebM রেকর্ডিং ব্যবহার করে। সব ব্রাউজার ও ভিডিও ফরম্যাটে কাজ নাও করতে পারে।</p>
 </section>
 </main>
 
 <script>
-const video=document.getElementById('video');
-const audio=document.getElementById('audio');
-const preview=document.getElementById('preview');
-const audioPreview=document.getElementById('audioPreview');
-const status=document.getElementById('status');
+const $=id=>document.getElementById(id);
+let videoURL='',audioURL='',exportURL='';
 
-let videoURL='',audioURL='';
-
-video.addEventListener('change',()=>{
-  if(videoURL) URL.revokeObjectURL(videoURL);
-  const f=video.files[0];
-  if(!f)return;
-  videoURL=URL.createObjectURL(f);
-  preview.src=videoURL;
-  preview.hidden=false;
-  status.textContent='ভিডিও নির্বাচিত হয়েছে।';
-});
-
-audio.addEventListener('change',()=>{
-  if(audioURL) URL.revokeObjectURL(audioURL);
-  const f=audio.files[0];
-  if(!f)return;
-  audioURL=URL.createObjectURL(f);
-  audioPreview.src=audioURL;
-  audioPreview.hidden=false;
-  status.textContent='ভয়েসওভার নির্বাচিত হয়েছে।';
-});
-
-document.getElementById('check').onclick=()=>{
-  if(!video.files[0]||!audio.files[0]){
-    status.textContent='ভিডিও ও ভয়েসওভার—দুটিই নির্বাচন করো।';
-    return;
-  }
-  status.textContent='দুটি ফাইল পাওয়া গেছে। এবার ভিডিওর সময় পরীক্ষা করো।';
+$('vid').onchange=()=>{
+ if(videoURL)URL.revokeObjectURL(videoURL);
+ const f=$('vid').files[0];if(!f)return;
+ videoURL=URL.createObjectURL(f);
+ $('vp').src=videoURL;$('vp').hidden=false;
+ $('status').textContent='ভিডিও নির্বাচিত হয়েছে।';
 };
-
-document.getElementById('seek').onclick=()=>{
-  if(!video.files[0]){
-    status.textContent='আগে একটি ভিডিও নির্বাচন করো।';
-    return;
-  }
-  const start=Number(document.getElementById('start').value);
-  const duration=Number(document.getElementById('duration').value);
-  if(!Number.isFinite(start)||!Number.isFinite(duration)||start<0||duration<1){
-    status.textContent='সময় ও ক্লিপের দৈর্ঘ্য সঠিকভাবে লিখো।';
-    return;
-  }
-  if(!Number.isFinite(preview.duration)||start>=preview.duration){
-    status.textContent='ভিডিওর দৈর্ঘ্যের মধ্যে শুরুর সময় দিতে হবে।';
-    return;
-  }
-  preview.currentTime=start;
-  preview.play();
-  status.textContent='প্রিভিউ শুরু হয়েছে। নির্ধারিত দৈর্ঘ্য: '+duration+' সেকেন্ড।';
+$('aud').onchange=()=>{
+ if(audioURL)URL.revokeObjectURL(audioURL);
+ const f=$('aud').files[0];if(!f)return;
+ audioURL=URL.createObjectURL(f);
+ $('ap').src=audioURL;$('ap').hidden=false;
+ $('status').textContent='ভয়েসওভার নির্বাচিত হয়েছে।';
+};
+$('check').onclick=()=>{
+ $('status').textContent=$('vid').files[0]&&$('aud').files[0]
+ ?'দুটি ফাইল পাওয়া গেছে। এখন প্রিভিউ চালাও।'
+ :'ভিডিও এবং ভয়েসওভার দুটোই নির্বাচন করো।';
+};
+$('play').onclick=async()=>{
+ const v=$('vp'),s=Number($('start').value),d=Number($('dur').value);
+ if(!v.src||!$('aud').files[0]){ $('status').textContent='ভিডিও ও ভয়েসওভার নির্বাচন করো।';return;}
+ if(s<0||d<1||!Number.isFinite(s)||!Number.isFinite(d)){ $('status').textContent='সঠিক সময় লিখো।';return;}
+ if(!Number.isFinite(v.duration)){ $('status').textContent='ভিডিও লোড হওয়া পর্যন্ত অপেক্ষা করো।';return;}
+ if(s>=v.duration){ $('status').textContent='শুরুর সময় ভিডিওর দৈর্ঘ্যের চেয়ে কম হতে হবে।';return;}
+ v.currentTime=s;
+ try{await v.play();$('status').textContent='ভিডিও প্রিভিউ চলছে।';}
+ catch(e){$('status').textContent='ভিডিওতে Play চাপ দিয়ে চালাও।';}
+};
+$('export').onclick=async()=>{
+ const v=$('vp'),a=$('ap'),s=Number($('start').value),d=Number($('dur').value);
+ if(!v.src||!a.src){$('status').textContent='আগে ভিডিও ও ভয়েসওভার নির্বাচন করো।';return;}
+ if(!Number.isFinite(v.duration)||s<0||d<1||s>=v.duration){$('status').textContent='ভিডিওর সময় ঠিক করো।';return;}
+ if(!v.captureStream||!window.MediaRecorder){$('status').textContent='এই ব্রাউজারে রেকর্ডিং সমর্থিত নয়। Chrome দিয়ে চেষ্টা করো।';return;}
+ const canvas=document.createElement('canvas');
+ canvas.width=v.videoWidth||1280;canvas.height=v.videoHeight||720;
+ const ctx=canvas.getContext('2d');
+ const stream=canvas.captureStream(30);
+ const AC=window.AudioContext||window.webkitAudioContext;
+ if(!AC){$('status').textContent='এই ব্রাউজারে অডিও মিক্সিং সমর্থিত নয়।';return;}
+ const ac=new AC();
+ const source=ac.createMediaElementSource(a);
+ const dest=ac.createMediaStreamDestination();
+ source.connect(dest);source.connect(ac.destination);
+ dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+ const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));
+ if(!mime){$('status').textContent='WebM রেকর্ডিং সমর্থিত নয়।';return;}
+ const chunks=[],rec=new MediaRecorder(stream,{mimeType:mime});
+ rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+ rec.onstop=()=>{
+  if(exportURL)URL.revokeObjectURL(exportURL);
+  exportURL=URL.createObjectURL(new Blob(chunks,{type:mime}));
+  $('out').src=exportURL;$('out').hidden=false;
+  $('download').href=exportURL;$('download').hidden=false;
+  $('status').textContent='Export শেষ! ভিডিও দেখে ডাউনলোড করো।';
+  ac.close();
+ };
+ try{
+  $('status').textContent='ভিডিও তৈরি হচ্ছে—এই ট্যাব খোলা রাখো।';
+  await ac.resume();
+  a.currentTime=0;v.currentTime=s;
+  await new Promise(resolve=>{
+   if(v.readyState>=2)resolve();else v.onloadeddata=resolve;
+  });
+  await v.play();await a.play();
+  const draw=()=>{
+   if(v.readyState>=2)ctx.drawImage(v,0,0,canvas.width,canvas.height);
+   if(!rec.stopped && v.currentTime < s+d && !v.ended)requestAnimationFrame(draw);
+  };
+  rec.start();draw();
+  setTimeout(()=>{
+   if(rec.state!=='inactive')rec.stop();
+   v.pause();a.pause();stream.getTracks().forEach(t=>t.stop());
+  },Math.min(d,Math.max(0,v.duration-s))*1000);
+ }catch(e){
+  if(rec.state!=='inactive')rec.stop();
+  $('status').textContent='Export করা যায়নি। Chrome-এ আবার চেষ্টা করো।';
+ }
 };
 </script>
 </body>
