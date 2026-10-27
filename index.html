@@ -4,136 +4,249 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Movie Editor</title>
+<title>AI Movie Explanation Editor</title>
 <style>
-body{margin:0;padding:20px;background:#10131c;color:#fff;font-family:Arial,sans-serif}
-main{max-width:700px;margin:auto}
-.panel{background:#1c2231;padding:18px;border-radius:14px;margin:16px 0}
-h1{color:#9eacff}
-label{display:block;margin:14px 0 7px}
-input,button{box-sizing:border-box;width:100%;padding:12px;margin:6px 0;border-radius:8px}
-button{background:#8998ff;border:0;font-weight:bold;cursor:pointer}
-video,audio{width:100%;margin-top:12px}
-.note{color:#c4cbe0;font-size:14px}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#101522;color:#f5f7ff;margin:0;padding:20px}
+main{max-width:760px;margin:auto}
+h1{color:#8bd5ff}
+.panel{background:#1b2436;padding:18px;border-radius:14px;margin:16px 0}
+label{display:block;margin:14px 0 6px}
+input,button{width:100%;padding:12px;border-radius:8px;border:1px solid #526079;margin:5px 0;background:#111827;color:white}
+button{background:#087fc4;border:0;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5}
+video{width:100%;max-height:420px;background:#000;border-radius:10px;margin-top:10px}
+small{color:#c2cbe0}
+a{color:#8bd5ff}
 </style>
 </head>
 <body>
 <main>
-<h1>🎬 AI Movie Editor</h1>
-<p>ভিডিও কাটো, ভয়েসওভার যোগ করো এবং নতুন ভিডিও তৈরি করো।</p>
+<h1>🎬 AI Movie Explanation Editor</h1>
+<p>ভিডিও ও ভয়েসওভার যোগ করো। ভয়েসের দৈর্ঘ্য অনুযায়ী ভিডিও ক্লিপ তৈরি করো।</p>
 
 <section class="panel">
-<label>ভিডিও নির্বাচন করো</label>
-<input id="vid" type="file" accept="video/*">
-<video id="vp" controls hidden></video>
+<label for="movie">মুভি ভিডিও নির্বাচন করো</label>
+<input id="movie" type="file" accept="video/*">
 
-<label>ভয়েসওভার নির্বাচন করো</label>
-<input id="aud" type="file" accept="audio/*">
-<audio id="ap" controls hidden></audio>
+<label for="voice">ভয়েসওভার নির্বাচন করো</label>
+<input id="voice" type="file" accept="audio/*">
 
-<label>শুরুর সময় (সেকেন্ড)</label>
-<input id="start" type="number" min="0" value="0">
+<label for="start">ভিডিওর শুরুর সময় (সেকেন্ড)</label>
+<input id="start" type="number" min="0" value="0" step="0.1">
 
-<label>ক্লিপের দৈর্ঘ্য (সেকেন্ড)</label>
-<input id="dur" type="number" min="1" value="10">
+<label for="duration">ক্লিপের দৈর্ঘ্য (সেকেন্ড)</label>
+<input id="duration" type="number" min="0.1" value="0.1" step="0.1">
 
-<button id="check">ফাইল যাচাই করো</button>
-<button id="play">প্রিভিউ চালাও</button>
-<button id="export">ভিডিও Export করো</button>
-<p id="status" class="note">প্রথমে ভিডিও ও ভয়েসওভার নির্বাচন করো।</p>
+<p id="info"><small>প্রথমে ভিডিও ও ভয়েসওভার নির্বাচন করো।</small></p>
+<button id="preview">▶ প্রিভিউ চালাও</button>
+<button id="export">📥 ভিডিও Export করো</button>
+<p id="status" role="status">প্রস্তুত।</p>
+<a id="download" hidden download="movie-clip.webm">Export করা ভিডিও ডাউনলোড করো</a>
 </section>
 
 <section class="panel">
-<h3>প্রিভিউ</h3>
-<video id="out" controls hidden></video>
-<a id="download" hidden download="edited-video.webm">ভিডিও ডাউনলোড করো</a>
-<p class="note">Export ফিচারটি ব্রাউজারের WebM রেকর্ডিং ব্যবহার করে। সব ব্রাউজার ও ভিডিও ফরম্যাটে কাজ নাও করতে পারে।</p>
+<h2>ভিডিও প্রিভিউ</h2>
+<video id="player" controls playsinline></video>
 </section>
+<p><small>ফাইলগুলো তোমার ব্রাউজারেই প্রসেস হয়। WebM Export সব ব্রাউজার বা সব ভিডিওতে কাজ নাও করতে পারে।</small></p>
 </main>
 
 <script>
-const $=id=>document.getElementById(id);
-let videoURL='',audioURL='',exportURL='';
+const movieInput = document.getElementById('movie');
+const voiceInput = document.getElementById('voice');
+const startInput = document.getElementById('start');
+const durationInput = document.getElementById('duration');
+const player = document.getElementById('player');
+const info = document.getElementById('info');
+const status = document.getElementById('status');
+const exportBtn = document.getElementById('export');
+const previewBtn = document.getElementById('preview');
+const download = document.getElementById('download');
 
-$('vid').onchange=()=>{
- if(videoURL)URL.revokeObjectURL(videoURL);
- const f=$('vid').files[0];if(!f)return;
- videoURL=URL.createObjectURL(f);
- $('vp').src=videoURL;$('vp').hidden=false;
- $('status').textContent='ভিডিও নির্বাচিত হয়েছে।';
-};
-$('aud').onchange=()=>{
- if(audioURL)URL.revokeObjectURL(audioURL);
- const f=$('aud').files[0];if(!f)return;
- audioURL=URL.createObjectURL(f);
- $('ap').src=audioURL;$('ap').hidden=false;
- $('status').textContent='ভয়েসওভার নির্বাচিত হয়েছে।';
-};
-$('check').onclick=()=>{
- $('status').textContent=$('vid').files[0]&&$('aud').files[0]
- ?'দুটি ফাইল পাওয়া গেছে। এখন প্রিভিউ চালাও।'
- :'ভিডিও এবং ভয়েসওভার দুটোই নির্বাচন করো।';
-};
-$('play').onclick=async()=>{
- const v=$('vp'),s=Number($('start').value),d=Number($('dur').value);
- if(!v.src||!$('aud').files[0]){ $('status').textContent='ভিডিও ও ভয়েসওভার নির্বাচন করো।';return;}
- if(s<0||d<1||!Number.isFinite(s)||!Number.isFinite(d)){ $('status').textContent='সঠিক সময় লিখো।';return;}
- if(!Number.isFinite(v.duration)){ $('status').textContent='ভিডিও লোড হওয়া পর্যন্ত অপেক্ষা করো।';return;}
- if(s>=v.duration){ $('status').textContent='শুরুর সময় ভিডিওর দৈর্ঘ্যের চেয়ে কম হতে হবে।';return;}
- v.currentTime=s;
- try{await v.play();$('status').textContent='ভিডিও প্রিভিউ চলছে।';}
- catch(e){$('status').textContent='ভিডিওতে Play চাপ দিয়ে চালাও।';}
-};
-$('export').onclick=async()=>{
- const v=$('vp'),a=$('ap'),s=Number($('start').value),d=Number($('dur').value);
- if(!v.src||!a.src){$('status').textContent='আগে ভিডিও ও ভয়েসওভার নির্বাচন করো।';return;}
- if(!Number.isFinite(v.duration)||s<0||d<1||s>=v.duration){$('status').textContent='ভিডিওর সময় ঠিক করো।';return;}
- if(!v.captureStream||!window.MediaRecorder){$('status').textContent='এই ব্রাউজারে রেকর্ডিং সমর্থিত নয়। Chrome দিয়ে চেষ্টা করো।';return;}
- const canvas=document.createElement('canvas');
- canvas.width=v.videoWidth||1280;canvas.height=v.videoHeight||720;
- const ctx=canvas.getContext('2d');
- const stream=canvas.captureStream(30);
- const AC=window.AudioContext||window.webkitAudioContext;
- if(!AC){$('status').textContent='এই ব্রাউজারে অডিও মিক্সিং সমর্থিত নয়।';return;}
- const ac=new AC();
- const source=ac.createMediaElementSource(a);
- const dest=ac.createMediaStreamDestination();
- source.connect(dest);source.connect(ac.destination);
- dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
- const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));
- if(!mime){$('status').textContent='WebM রেকর্ডিং সমর্থিত নয়।';return;}
- const chunks=[],rec=new MediaRecorder(stream,{mimeType:mime});
- rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
- rec.onstop=()=>{
-  if(exportURL)URL.revokeObjectURL(exportURL);
-  exportURL=URL.createObjectURL(new Blob(chunks,{type:mime}));
-  $('out').src=exportURL;$('out').hidden=false;
-  $('download').href=exportURL;$('download').hidden=false;
-  $('status').textContent='Export শেষ! ভিডিও দেখে ডাউনলোড করো।';
-  ac.close();
- };
- try{
-  $('status').textContent='ভিডিও তৈরি হচ্ছে—এই ট্যাব খোলা রাখো।';
-  await ac.resume();
-  a.currentTime=0;v.currentTime=s;
-  await new Promise(resolve=>{
-   if(v.readyState>=2)resolve();else v.onloadeddata=resolve;
-  });
-  await v.play();await a.play();
-  const draw=()=>{
-   if(v.readyState>=2)ctx.drawImage(v,0,0,canvas.width,canvas.height);
-   if(!rec.stopped && v.currentTime < s+d && !v.ended)requestAnimationFrame(draw);
+let movieURL = '', voiceURL = '', voiceDuration = 0, movieDuration = 0;
+let audioContext = null;
+
+function message(text) { status.textContent = text; }
+
+movieInput.addEventListener('change', () => {
+  const file = movieInput.files[0];
+  if (!file) return;
+  if (movieURL) URL.revokeObjectURL(movieURL);
+  movieURL = URL.createObjectURL(file);
+  player.src = movieURL;
+  player.onloadedmetadata = () => {
+    movieDuration = player.duration;
+    updateInfo();
   };
-  rec.start();draw();
-  setTimeout(()=>{
-   if(rec.state!=='inactive')rec.stop();
-   v.pause();a.pause();stream.getTracks().forEach(t=>t.stop());
-  },Math.min(d,Math.max(0,v.duration-s))*1000);
- }catch(e){
-  if(rec.state!=='inactive')rec.stop();
-  $('status').textContent='Export করা যায়নি। Chrome-এ আবার চেষ্টা করো।';
- }
-};
+  download.hidden = true;
+});
+
+voiceInput.addEventListener('change', () => {
+  const file = voiceInput.files[0];
+  if (!file) return;
+  if (voiceURL) URL.revokeObjectURL(voiceURL);
+  voiceURL = URL.createObjectURL(file);
+  const audio = new Audio();
+  audio.src = voiceURL;
+  audio.onloadedmetadata = () => {
+    voiceDuration = audio.duration;
+    durationInput.value = voiceDuration.toFixed(2);
+    updateInfo();
+  };
+  audio.onerror = () => message('এই অডিও ফাইলটি পড়া যাচ্ছে না। অন্য অডিও ফাইল চেষ্টা করো।');
+  download.hidden = true;
+});
+
+function updateInfo() {
+  if (movieDuration && voiceDuration) {
+    const start = Math.max(0, Number(startInput.value) || 0);
+    const actual = Math.min(voiceDuration, Math.max(0, movieDuration - start));
+    info.textContent = `ভিডিও: ${movieDuration.toFixed(1)} সেকেন্ড | ভয়েস: ${voiceDuration.toFixed(1)} সেকেন্ড | সর্বোচ্চ ক্লিপ: ${actual.toFixed(1)} সেকেন্ড`;
+    if (start + voiceDuration > movieDuration) {
+      info.textContent += ' — ভিডিওতে ভয়েসের পুরো দৈর্ঘ্য নেই; শুরুর সময় কমাও।';
+    }
+  }
+}
+startInput.addEventListener('input', updateInfo);
+
+previewBtn.addEventListener('click', async () => {
+  if (!movieURL || !voiceURL) {
+    message('আগে ভিডিও এবং ভয়েসওভার দুটোই নির্বাচন করো।');
+    return;
+  }
+  player.currentTime = Math.max(0, Number(startInput.value) || 0);
+  player.muted = false;
+  try {
+    await player.play();
+    message('ভিডিও প্রিভিউ চলছে। ভয়েস আলাদাভাবে শুনতে অডিও ফাইলটিও চালাতে পারো।');
+  } catch {
+    message('প্রিভিউ চালু হয়নি। ভিডিওর Play বোতাম চাপো।');
+  }
+});
+
+exportBtn.addEventListener('click', async () => {
+  if (!movieURL || !voiceURL) {
+    message('আগে ভিডিও এবং ভয়েসওভার নির্বাচন করো।');
+    return;
+  }
+  if (!('MediaRecorder' in window) || !HTMLCanvasElement.prototype.captureStream) {
+    message('এই ব্রাউজারে ভিডিও Export সমর্থিত নয়। ডেস্কটপের Chrome বা Edge চেষ্টা করো।');
+    return;
+  }
+
+  const start = Math.max(0, Number(startInput.value) || 0);
+  const requested = Number(durationInput.value);
+  const duration = Math.min(requested, voiceDuration);
+  if (!Number.isFinite(duration) || duration <= 0) {
+    message('ক্লিপের দৈর্ঘ্য সঠিকভাবে দাও।');
+    return;
+  }
+  if (start + duration > movieDuration) {
+    message('ভিডিওর শুরুর সময় কমাও; নির্বাচিত ক্লিপটি মুভির বাইরে চলে যাচ্ছে।');
+    return;
+  }
+
+  exportBtn.disabled = true;
+  previewBtn.disabled = true;
+  download.hidden = true;
+  let recorder, stream, audioStream, source, audioElement;
+  try {
+    const video = document.createElement('video');
+    video.src = movieURL;
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = resolve;
+      video.onerror = () => reject(new Error('ভিডিও লোড করা যায়নি।'));
+      video.load();
+    });
+    video.currentTime = start;
+    await new Promise(resolve => video.onseeked = resolve);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas চালু করা যায়নি।');
+
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    await audioContext.resume();
+    audioElement = new Audio(voiceURL);
+    audioElement.crossOrigin = 'anonymous';
+    audioElement.preload = 'auto';
+    await new Promise((resolve, reject) => {
+      audioElement.oncanplaythrough = resolve;
+      audioElement.onerror = () => reject(new Error('ভয়েসওভার লোড করা যায়নি।'));
+      audioElement.load();
+    });
+
+    source = audioContext.createMediaElementSource(audioElement);
+    const gain = audioContext.createGain();
+    gain.gain.value = 1;
+    const destination = audioContext.createMediaStreamDestination();
+    source.connect(gain);
+    gain.connect(destination);
+    audioStream = destination.stream;
+
+    stream = canvas.captureStream(30);
+    audioStream.getAudioTracks().forEach(track => stream.addTrack(track));
+
+    const mimeTypes = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+    const mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
+    if (!mimeType) throw new Error('এই ব্রাউজারে সমর্থিত WebM কোডেক পাওয়া যায়নি।');
+
+    const chunks = [];
+    recorder = new MediaRecorder(stream, {mimeType});
+    recorder.ondataavailable = event => {
+      if (event.data && event.data.size) chunks.push(event.data);
+    };
+    const finished = new Promise((resolve, reject) => {
+      recorder.onstop = resolve;
+      recorder.onerror = () => reject(new Error('ভিডিও রেকর্ডিং ব্যর্থ হয়েছে।'));
+    });
+
+    let running = true;
+    const draw = () => {
+      if (!running) return;
+      if (video.readyState >= 2) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      requestAnimationFrame(draw);
+    };
+    draw();
+
+    await new Promise(resolve => video.onseeked = resolve);
+    await video.play();
+    await audioElement.play();
+    recorder.start(250);
+    message('ভিডিও Export হচ্ছে…');
+    await new Promise(resolve => setTimeout(resolve, duration * 1000));
+    running = false;
+    video.pause();
+    audioElement.pause();
+    if (recorder.state !== 'inactive') recorder.stop();
+    await finished;
+
+    const blob = new Blob(chunks, {type: mimeType});
+    if (!blob.size) throw new Error('Export ফাইল খালি হয়েছে।');
+    download.href = URL.createObjectURL(blob);
+    download.hidden = false;
+    message('Export শেষ! নিচের লিংকে চাপ দিয়ে WebM ভিডিও ডাউনলোড করো।');
+  } catch (error) {
+    message('Export হয়নি: ' + (error.message || 'অজানা সমস্যা') + '। অন্য ব্রাউজার বা ছোট ক্লিপ চেষ্টা করো।');
+  } finally {
+    if (audioElement) audioElement.pause();
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    if (audioStream) audioStream.getTracks().forEach(track => track.stop());
+    if (audioContext) {
+      await audioContext.close().catch(() => {});
+      audioContext = null;
+    }
+    exportBtn.disabled = false;
+    previewBtn.disabled = false;
+  }
+});
 </script>
 </body>
 </html>
